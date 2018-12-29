@@ -20,7 +20,7 @@ namespace NetEscapades.Configuration.Yaml
 
             // https://dotnetfiddle.net/rrR2Bb
             var yaml = new YamlStream();
-            yaml.Load(new StreamReader(input));
+            yaml.Load(new StreamReader(input, detectEncodingFromByteOrderMarks: true));
 
             if (yaml.Documents.Any())
             {
@@ -41,17 +41,17 @@ namespace NetEscapades.Configuration.Yaml
 
         private void VisitYamlNode(string context, YamlNode node)
         {
-            if (node is YamlScalarNode)
+            if (node is YamlScalarNode scalarNode)
             {
-                VisitYamlScalarNode(context, (YamlScalarNode)node);
+                VisitYamlScalarNode(context, scalarNode);
             }
-            if (node is YamlMappingNode)
+            if (node is YamlMappingNode mappingNode)
             {
-                VisitYamlMappingNode(context, (YamlMappingNode)node);
+                VisitYamlMappingNode(context, mappingNode);
             }
-            if (node is YamlSequenceNode)
+            if (node is YamlSequenceNode sequenceNode)
             {
-                VisitYamlSequenceNode(context, (YamlSequenceNode)node);
+                VisitYamlSequenceNode(context, sequenceNode);
             }
         }
 
@@ -66,7 +66,7 @@ namespace NetEscapades.Configuration.Yaml
                 throw new FormatException(Resources.FormatError_KeyIsDuplicated(currentKey));
             }
 
-            _data[currentKey] = yamlValue.Value;
+            _data[currentKey] = IsNullValue(yamlValue) ? null : yamlValue.Value;
             ExitContext();
         }
 
@@ -116,6 +116,17 @@ namespace NetEscapades.Configuration.Yaml
         {
             _context.Pop();
             _currentPath = ConfigurationPath.Combine(_context.Reverse());
+        }
+
+        private bool IsNullValue(YamlScalarNode yamlValue)
+        {
+            return yamlValue.Style == YamlDotNet.Core.ScalarStyle.Plain
+                && (
+                    yamlValue.Value == "~"
+                    || yamlValue.Value == "null"
+                    || yamlValue.Value == "Null"
+                    || yamlValue.Value == "NULL"
+                );
         }
     }
 }
